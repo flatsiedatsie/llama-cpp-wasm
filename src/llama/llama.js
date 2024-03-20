@@ -2,11 +2,12 @@ import { action } from "./actions.js";
 
 class LlamaCpp {
     // callback have to be defined before load_worker
-    constructor(url, init_callback, write_result_callback, on_complete_callback) {
+    constructor(url, init_callback, write_result_callback, on_complete_callback, message_callback) {
         this.url = url;
         this.init_callback = init_callback;
         this.write_result_callback = write_result_callback;
         this.on_complete_callback = on_complete_callback;
+		this.message_callback = message_callback;
         this.loadWorker();
     }
     
@@ -17,7 +18,28 @@ class LlamaCpp {
         );
         
         this.worker.onmessage = (event) => {
+			console.log("received message from worker: ", event, event.data.event);
+			console.log("window.settings.assistant: ", window.settings.assistant);
             switch (event.data.event) {
+				
+				case action.MESSAGE:
+					console.log("got generic message from worker: ", event.data);
+                	// GENERIC MESSAGE FROM WORKER
+					
+                	if (this.message_callback) {
+						console.log("calling message_callback with: event.data ");
+						if(event.data.progression){
+							console.log("got data about download / load progress: ", event.data.progression);
+							console.log(" downloading assistant: ", window.settings.assistant);
+							this.message_callback(event.data.progression);
+						}
+                    	else{
+                    		//console.error("missing event.data.progression");
+                    	}
+                	}
+					
+                	break;
+				
                 case action.INITIALIZED:
                     // Load Model
                     if (this.init_callback) {
